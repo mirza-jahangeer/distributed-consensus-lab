@@ -2,6 +2,8 @@
 
 **Last updated:** 2026-11-04. Checkmarks indicate committed code and local validation, not formal proof or production readiness.
 
+**Next phase:** [Read the comprehensive .NET 10 + React + TLA+ implementation plan](docs/IMPLEMENTATION_PLAN.md). The roadmap is published; its future phases are **not yet implemented**.
+
 - [x] Public GitHub repository confirmed and writable.
 - [x] Research comparison with references to original Raft work, production libraries, simulations and testing frameworks.
 - [x] Deterministic single-process event scheduler and virtual five-node Raft-inspired state machine.
