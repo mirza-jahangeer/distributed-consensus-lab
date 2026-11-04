@@ -1,25 +1,19 @@
 # Development progress
 
-This file tracks published work in this repository. **A checked item means it has been completed and verified; an unchecked item is not complete.**
+**Last updated:** 2026-11-04. Checkmarks indicate committed code and local validation, not formal proof or production readiness.
 
-Last status update: 2026-11-02
+- [x] Public GitHub repository confirmed and writable.
+- [x] Research comparison with references to original Raft work, production libraries, simulations and testing frameworks.
+- [x] Deterministic single-process event scheduler and virtual five-node Raft-inspired state machine.
+- [x] Network partitions, targeted message drops, simulated crash/restart.
+- [x] Correct and intentionally unsafe election modes plus stale-candidate scenario.
+- [x] Historical committed-entry oracle, divergence detection and witness event IDs.
+- [x] CLI commands, JSON export, canonical replay and standalone HTML report.
+- [x] Ten tests passed locally on Python 3.13 during development.
+- [x] Detailed low-level Mermaid architecture committed under docs/.
+- [x] Core code, tests, documentation and GitHub Actions workflow committed to main.
+- [ ] Confirm GitHub Actions matrix has passed on Python 3.11, 3.12 and 3.13.
+- [ ] Build automatic schedule search and failing-trace minimization.
+- [ ] Run comparisons with actual production consensus libraries.
 
-## Milestones
-- [x] Confirm GitHub repository is accessible and public
-- [x] Define initial project direction: deterministic consensus fault-forensics lab
-- [ ] Finish comparative research and document attributable sources in RESEARCH.md
-- [ ] Implement deterministic Raft-inspired simulator (virtual clock and reproducible message scheduling)
-- [ ] Implement fault injection (partitions, dropped messages, crash/restart)
-- [ ] Implement invariant checks and an intentionally buggy election mode
-- [ ] Write and run automated tests
-- [ ] Publish runnable code, usage examples and architecture documentation
-- [ ] Verify committed code and report results
-
-## Scope and guardrails
-The initial MVP is a teaching and fault-diagnosis simulator, not a production-ready Raft implementation. Its intentionally faulty mode must be clearly segregated and must never be advertised as safe to deploy.
-
-## How to monitor
-Browse **Commits** for new pushes. Check README.md for run instructions once it is available. This checklist is updated when each milestone is verified.
-
-## Current state
-The repo is set up for tracking. Research, implementation, testing and publication of the actual MVP are **still pending**.
+**Scope:** Educational and non-production. A passed local test suite covers a small scenario set, not all Raft behaviors or all possible failure schedules.
