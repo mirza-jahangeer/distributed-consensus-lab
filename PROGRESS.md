@@ -3,6 +3,14 @@
 **Last updated:** 2026-11-04. Checkmarks indicate committed code and local validation, not formal proof or production readiness.
 
 **Next phase:** [Read the comprehensive .NET 10 + React + TLA+ implementation plan](docs/IMPLEMENTATION_PLAN.md). The roadmap is published; its future phases are **not yet implemented**.
+**Approved core requirement (planned, not implemented):** integrate with an **actual Raft-based distributed test cluster**, inject scoped transport faults, verify majority/minority behavior, restore faults and export live evidence. See [Real Raft Integration & Fault Injection](docs/REAL_RAFT_INTEGRATION.md). The comprehensive roadmap has been extended to **20 weeks / 240–300 estimated engineering hours**.
+
+- [x] Documented the real-Raft adapter, controlled fault injection architecture and acceptance gates.
+- [x] Updated and published the comprehensive 20-week plan.
+- [ ] Build the Go etcd-io/raft three-node test harness and C# adapter.
+- [ ] Implement controlled Toxiproxy peer links, fault policies, TTL and cleanup.
+- [ ] Demonstrate real Raft majority/minority recovery and publish verification evidence.
+
 
 - [x] Public GitHub repository confirmed and writable.
 - [x] Research comparison with references to original Raft work, production libraries, simulations and testing frameworks.
