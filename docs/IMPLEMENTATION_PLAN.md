@@ -253,7 +253,7 @@ distributed-consensus-lab/
 
 Do not create empty placeholder projects purely to fill this tree. Add directories when features begin, and make commits small and independently testable.
 
-## 7. Sixteen-week implementation roadmap
+## 7. Twenty-week implementation roadmap
 
 ### Phase 0 — Week 1: baseline and build reliability (12–15 h)
 
@@ -525,13 +525,14 @@ Suggested frontend implementation: Vite + React + TypeScript, React Flow (verify
 
 **R4 done:** Reproducible bounded TLA+ checks are published alongside exact model parameters, the real Raft fault-injection demo is documented and passing, all CI gates pass (or release is explicitly blocked), and evaluation has bounded claims and reproducible artifacts.
 
-**Five-minute public demo:**
-1. Show initial five-node topology and partition A/B/C vs D/E.
+**Final public demonstration (simulation + real Raft):**
+1. Show the virtual five-node topology and partition A/B/C vs D/E.
 2. Run correct election path and show X survives the leadership change.
 3. Enable named unsafe vote mutation, use identical scenario/seed and show D elected stale.
 4. Highlight C's previously committed X replaced by Y; jump to vote/truncation witnesses.
 5. Run bounded schedule explorer, inspect found seed, reduce witness and replay.
-6. Open matching finite-model checking results; explain what is and is not proven.
+6. Switch to the owned disposable three-node **actual Raft harness**, apply an approved TCP partition, prove majority writes proceed and minority cannot acknowledge new commits, heal, and verify catch-up.
+7. Display recovery and confirmed fault-cleanup evidence, then open bounded formal checking results and explain what is and is not proven.
 
 ## 17. References and rationale
 
