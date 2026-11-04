@@ -77,6 +77,13 @@ The code is small and uses only Python's standard library so every transition is
 
 **Not implemented:** real network/storage, disk durability, snapshotting, automated election timers, membership changes, concurrent clients, leases, formal model checking, real-world linearizability, network reordering beyond the scripted scheduler, or exhaustive failure exploration. No production security or reliability properties are claimed. This lab illustrates an important Raft restriction, not a complete Raft specification.
 
+
+## Planned real Raft integration and fault injection
+
+The current code is a **virtual Python teaching simulator**. The next core milestone is integrating an **actual three-node etcd-io/raft test cluster**, controlled by a .NET adapter, then injecting bounded network partitions and latency through isolated test-only infrastructure. The lab will observe quorum, committed/applied writes, recovery and fault cleanup; it will never silently apply destructive tests to production or arbitrary external systems.
+
+Read the [real Raft integration and fault-injection specification](docs/REAL_RAFT_INTEGRATION.md) and the [updated 20-week implementation roadmap](docs/IMPLEMENTATION_PLAN.md). **These real-cluster capabilities are planned, not yet working in the repository.**
+
 ## Next engineering iterations
 
 - Define a reusable declarative scenario/fault DSL, with seed-based schedule exploration and shrinking of failing traces.
