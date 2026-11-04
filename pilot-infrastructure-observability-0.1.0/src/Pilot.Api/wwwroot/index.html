@@ -1,0 +1,7 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Infrastructure Pilot</title><link rel="stylesheet" href="/style.css"></head><body>
+<header><span class="brand">◈ Infrastructure Pilot</span><span>LOCAL PREVIEW · 0.1.0</span></header>
+<main><p class="eyebrow">OPERATIONS / MACHINE VISIBILITY</p><h1>Understand your machines.</h1><p class="intro">Inventory, resource pressure and evidence in one place. Observations older than two minutes are marked stale.</p>
+<form id="connect"><label for="key">Local API key</label><div class="connection"><input id="key" type="password" required autocomplete="off" placeholder="Enter the key used to start the API"><button>Connect</button></div></form>
+<p id="status" role="status">Connect to load inventory. The key stays in this page’s memory.</p><section id="summary" class="summary"></section>
+<section><div class="section-head"><h2>Machine inventory</h2><button id="refresh" type="button">Refresh</button></div><div id="machines" class="machines"><p>No observations loaded.</p></div></section>
+<section class="timeline"><h2>Evidence timeline</h2><p>Discovery and health transitions. This preview does not infer root causes.</p><ol id="events"></ol></section></main><script src="/app.js"></script></body></html>
