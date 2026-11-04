@@ -5,11 +5,14 @@
 **Status:** Proposed implementation roadmap; this document is a plan, not evidence that the planned capabilities exist.  
 **Repository:** https://github.com/mirza-jahangeer/distributed-consensus-lab  
 **Proposed stack:** .NET 10/C#, React/TypeScript, TLA+ (TLC initially), Python 3.11+ reference MVP.  
-**Planning assumption:** One primary developer working approximately 12–15 focused hours/week, 16 weeks (~192–240 hours). Schedule is an estimate, subject to test results and scope.
+**Planning assumption:** One primary developer working approximately 12–15 focused hours/week, 20 weeks (~240–300 hours). Schedule is an estimate, subject to test results and scope.
 
 ---
 
 ## 1. Product thesis and differentiation
+
+**2026-11-04 mandatory scope addition:** The lab must integrate with an **actual Raft-based distributed test system** and inject *authorized, bounded, recoverable faults* into its communication layer, not only simulate virtual nodes. See [Real Raft Integration & Fault Injection](REAL_RAFT_INTEGRATION.md). Real runs are not exactly deterministic; distinguish the simulator's exact replay from real-cluster scenario reproducibility. No production fault injection is supported in the initial scope.
+
 
 Build a **deterministic consensus failure-forensics lab**, rather than another general-purpose Raft clone. Engineers should be able to define a bounded cluster, inject faults, search for a safety failure, reproduce it deterministically, reduce its execution to a shorter counterexample, and inspect the causal evidence in a browser.
 
@@ -42,13 +45,15 @@ The current GitHub main branch includes:
 
 | Release | Target | Essential capabilities | Explicitly deferred |
 | --- | --- | --- | --- |
-| R0 / baseline | Week 1 | Reproducible Python baseline, CI diagnosis, contract fixtures, ADRs | New Raft features |
-| R1 / C# parity | Weeks 2–6 | C# state machine, virtual scheduler, same stale-leader positive/negative demonstrations, parity fixtures | Production transport, automatic search |
-| R2 / forensics MVP | Weeks 7–10 | Independent safety oracle, structured evidence, bounded seed-based schedule search, reproducible failing schedule and minimizer | General linearizability, formal proof |
-| R3 / interactive lab | Weeks 11–12 | ASP.NET Core experiment API and browser timeline/cluster visualization, import/export, side-by-side replay | Public multi-user SaaS |
-| R4 / research-grade prototype | Weeks 13–16 | Small TLA+ model checked with TLC, mutation experiments, benchmark/research report, release packaging, tightened CI | Full production Raft feature parity |
+| R0 / baseline | Week 1 | Python baseline, CI repair, fixtures and ADRs | New Raft features |
+| R1 / C# parity | Weeks 2–6 | Typed .NET state machine, scheduler, fault model and scenario parity | External transport |
+| R2 / safety and real Raft | Weeks 7–12 | Independent oracle, real etcd-io/raft Go harness, adapter, Toxiproxy, safe fault lifecycle and real-cluster evidence | Arbitrary production attachment |
+| R3 / exploration and UI | Weeks 13–16 | Bounded failure schedule search, shrinking, ASP.NET API and React replay UI | Multi-tenant SaaS |
+| R4 / research prototype | Weeks 17–20 | Bounded TLA+ model checks, benchmarks, security/CI hardening, release | Full production Raft / general linearizability |
 
-**Stretch only after R4:** Go sidecar adapter for etcd-io/raft, richer linearizability checker, persistence crash consistency, membership changes, snapshots, performance profiling and multi-user hosting.
+**Real-cluster acceptance:** a disposable three-node Raft harness must survive a follower partition and restart, preserve acknowledged writes, prevent minority commits, recover after healing, and export verification and cleanup evidence. Run no fault against uncontrolled systems.
+
+**Implementation note:** The core C# implementation is our teaching simulator. The production Raft algorithm for real-cluster experiments is used *through a Go harness* based on etcd-io/raft. Both share the experiment API/schema and independent checkers, but not identical timing or replay guarantees.
 
 ## 4. Proposed architecture
 
@@ -83,6 +88,8 @@ flowchart TB
 - **Consensus.Contracts:** Versioned scenarios, commands, messages, events, traces and violation records. Keep schemas framework-agnostic.
 - **Consensus.Checkers:** Independent, read-only event/state analyzers; never modify a consensus node during checking.
 - **Consensus.Exploration:** Bounded schedule generation, canonical state hashing, duplicate-state pruning, failure extraction and shrinking.
+- **Consensus.Integrations:** Real-cluster adapter abstractions, etcd-io/raft Go harness client, dedicated fault provider, scoped environment policy and cleanup.
+- **harness/go-raft/:** Independent Go peers with transport, stable storage, applied key/value FSM, lifecycle and observable test endpoints; real executions are not exact schedule replays.
 - **Consensus.Cli:** Script and report entry points; must work offline.
 - **Consensus.Api:** Experiment execution/query endpoints; bounded resources, input validation and streaming of trace events.
 - **web/:** React UI consumes API/trace schemas; no consensus rules embedded in the browser.
@@ -193,6 +200,10 @@ distributed-consensus-lab/
       Consensus.Simulation/
       Consensus.Checkers/
       Consensus.Exploration/
+      Consensus.Integrations.Abstractions/
+      Consensus.Integrations.RaftHarness/
+      Consensus.Integrations.Toxiproxy/
+      Consensus.Integrations.Etcd/
       Consensus.Cli/
       Consensus.Api/
     tests/
@@ -200,6 +211,10 @@ distributed-consensus-lab/
       Consensus.Simulation.Tests/
       Consensus.Integration.Tests/
       Consensus.Conformance.Tests/
+  harness/
+    go-raft/
+  infrastructure/
+    docker/
   web/
     src/
       components/ClusterGraph/
@@ -225,6 +240,7 @@ distributed-consensus-lab/
     README.md
   docs/
     IMPLEMENTATION_PLAN.md
+    REAL_RAFT_INTEGRATION.md
     ADR/
     API.md
     THREAT_MODEL.md
@@ -282,41 +298,53 @@ Do not create empty placeholder projects purely to fill this tree. Add directori
 
 **Gate:** For each violation: type, affected node/index/term, witnesses, first observed tick, and reproduction command available. No known false positives in a small curated corpus.
 
-### Phase 5 — Weeks 9–10: automated exploration and shrinking (24–30 h)
+### Phase 5 — Weeks 9–10: real Raft harness and adapter (24–30 h)
 
-**Week 9:** Seeded run generator, fault budgets, enabled-event scheduling, coverage statistics, bounded schedule search, duplicate-state tracking.
-**Week 10:** Delta-debugging minimizer, deterministic replay regression, preservation of violation type, evidence provenance and exploration report.
+**Week 9:** Define the IClusterAdapter, IFaultProvider and capability contracts; implement target allowlists, dry-run plans and policy validation. Begin Go etcd-io/raft harness with three independent peers.
+**Week 10:** Implement peer transport, stable storage and correct persist-before-send ordering; test leader election, replicated key/value operations and retained-volume restarts. Avoid claiming the Python or C# simulator is the production Raft engine.
 
-**Deliverables:** Explorer discovers a known unsafe mutation from at least one checked-in seed without a handcrafted complete schedule; it emits a reduced, replayable witness.
+**Deliverables:** Disposable 3-node real Raft cluster, .NET adapter, explicit status and applied index observations, reproducible startup, contract tests.
 
-**Gate:** Seed reproducibility test; reduced trace is no longer than original; if the minimizer reports 1-minimality, removing any one supported removable unit fails to preserve the target violation. Track explored state count and budget as metrics; do not claim exhaustive search if it was sampled.
+**Gate:** Live quorum elects a leader, a replicated SET completes, the follower can restart with retained data and catch up. If durability is incomplete, the integration gate is blocked.
 
-### Phase 6 — Weeks 11–12: API and interactive UI (24–30 h)
+### Phase 6 — Weeks 11–12: fault injection, recovery and evidence (24–30 h)
 
-**Week 11:** Minimal API for create/run/step/resume/pause/cancel and trace download; bounded concurrency and cancellation; local-origin CORS; OpenAPI; server-side persistence of artifacts in sandboxed paths only.
-**Week 12:** React+TypeScript experiment designer, network graph, per-node log inspector, virtual-time timeline, synchronized safe/unsafe compare, violation evidence jump links, scenario import/export, accessible keyboard controls.
+**Week 11:** Route intended Raft peer links through controlled Toxiproxy/TCP fault endpoints; apply partition, latency and loss using bounded plans; add Raft-aware message hooks in the harness for single-RPC faults, not generic TCP adapters.
+**Week 12:** Implement cleanup TTL, independent control-plane reaper, experiment history collection, quorum/progress/recovery checks and machine-readable results. Reject unsupported faults or non-allowlisted endpoints.
 
-**Deliverables:** A visitor can run the included failing experiment through the browser, pause and step, select a node and inspect the exact vote/append/overwrite events.
+**Deliverables:** Majority/minority live experiment, controlled network healing, crash/restart demo, report with acknowledgments, node state, fault action receipts and cleanup status.
 
-**Gate:** End-to-end UI tests, invalid-file rejection, cancellation behavior, run quotas, no API requirement for unsafe code execution. A local demo works from a documented startup command.
+**Gate:** Majority processes test writes while minority cannot acknowledge new majority commits, follower catches up after healing, acknowledged data survives restart, and every fault is reverted or marked FAILED_CLEANUP with further experiments blocked.
 
-### Phase 7 — Weeks 13–14: bounded formal-model verification (24–30 h)
+**Deep specification:** [REAL_RAFT_INTEGRATION.md](REAL_RAFT_INTEGRATION.md).
 
-**Week 13:** Build a small TLA+ model of terms, voting, logs, commits and fixed membership; document abstraction mapping to implementation state; define election-safety and leader-completeness/state-machine safety invariants.
-**Week 14:** Run TLC for a finite 3-node model with bounded terms/logs; create a named mutated voting model to obtain a counterexample; compare relevant behaviors to simulator fixtures. Investigate inconclusive/time-limited checks.
+### Phase 7 — Weeks 13–14: automated simulation exploration and shrinking (24–30 h)
 
-**Deliverables:** Checked-in .tla/.cfg files, reproducible model-checking commands, logs or results summary, assumptions and limitations.
+**Week 13:** Seeded scheduler, bounded fault/event budgets, state fingerprinting and duplicate-state tracking for the **simulator**.
+**Week 14:** Counterexample minimizer that preserves a named violation, replay verification, evidence and test reports.
 
-**Gate:** Correct bounded model finishes with no invariant violation for stated parameters; deliberately faulty model generates a counterexample or the experiment is transparently marked blocked. An absence of violations in the bounded model is never called a proof of the C# implementation.
+**Deliverables:** Explorer finds a known unsafe simulation trace without hardcoded complete failure schedule and produces a replayable reduced counterexample.
 
-### Phase 8 — Weeks 15–16: hardening, evaluation and release (24–30 h)
+**Gate:** Same seed and engine reproduce the same simulation semantics; shrinker reports reduction method and checks 1-minimality only under supported operators. Real Raft experiment replay is configuration-level, not exact.
 
-**Week 15:** Threat model, benchmark harness, performance budget checks, static/security scanning, dependency audit, CI matrix coverage, retention/limits for generated artifacts, 1–2 baseline comparisons with existing tools.
-**Week 16:** Developer docs, architecture decision records, demo recording/script, README screenshots, sample reports, MIT/license checks, v1.0 release notes and public reproducibility instructions.
+### Phase 8 — Weeks 15–16: API and React visualization (24–30 h)
 
-**Deliverables:** Tagged release candidate with source, test results, exact sample scenarios, downloadable reports and clear feature/limitation table.
+**Week 15:** ASP.NET Core local API for run, step, pause, cancel, status, validated experiment plan, live-cluster capability discovery, observation and artifact export.
+**Week 16:** React topology viewer, per-node logs, virtual-time and real-time timelines, side-by-side simulated mutation and real-cluster evidence views.
 
-**Gate:** All required CI checks green or published exception with severity and owner; documented demonstration can be reproduced from a clean machine; no unexplained failing safety fixture.
+**Deliverables:** Browser can choose **Simulated** or **Integrated Raft**, inspect supported faults, run an authorized disposable experiment and see diagnosis and confirmed rollback.
+
+**Gate:** End-to-end tests of validated scope, pause/cancel, evidence and failed cleanup. Unsupported controls are disabled or rejected with clear explanation.
+
+### Phase 9 — Weeks 17–18: bounded TLA+ model checking (24–30 h)
+
+Create a small formal model for terms, votes, logs and commits, with fixed membership and a mutation model. Execute TLC over explicit finite bounds; publish exact configuration, outputs and limitations. This models protocol properties, not proof of the Go harness or C# simulator implementation.
+
+### Phase 10 — Weeks 19–20: hardening, comparisons and release (24–30 h)
+
+Harden network isolation, authorization, resource quotas, dependencies and CI; benchmark simulated search and live-cluster recovery separately; document unobservable properties and cleanup failures; verify a clean-checkout disposable-cluster demo.
+
+**Gate:** Integration acceptance plus existing safety/CI gates pass; unresolved failures block stable release. Publish source, sample traces, versions and transparent limits.
 
 ## 8. Public API contracts (planned)
 
@@ -340,7 +368,7 @@ Error model: ValidationError (400), NotFound (404), Conflict/InvalidState (409),
 
 ## 9. Browser UI — specific components
 
-1. **Experiment Workspace:** Pick scenario, node count, mutation, seed, fault budget, max virtual events; validation before execution.
+1. **Experiment Workspace:** Select simulation vs real Raft cluster adapter, read capabilities and fault-scope dry run, then pick scenario, node count, mutation (simulation only), seed, fault budget and max virtual events.
 2. **Cluster Topology:** Nodes display role, term, commit index and connected partitions; edge animation represents delivered/dropped messages.
 3. **Log Inspector:** Per-node rows show index, term, command, committed status and conflicting/historical entries.
 4. **Timeline + Scrubber:** Step, play/pause, virtual tick, filtered event types, bookmark/replay links.
@@ -348,6 +376,7 @@ Error model: ValidationError (400), NotFound (404), Conflict/InvalidState (409),
 6. **Comparison View:** Align correct vs mutated runs by scenario phase and semantic event identity, not by wall-clock timestamp.
 7. **Exploration Dashboard:** Seeds tried, unique states/schedules explored, failures discovered, shrinking outcome and resource use.
 8. **Accessibility:** Keyboard controls, text descriptions of colors/icons, responsive layout, trace export and error states.
+9. **Real-cluster health and cleanup:** Show leader, quorum, applied indices, read/write acknowledgments, injected TCP/message faults, remaining TTL, cleanup receipt and differences between precise simulation replay and real-world reruns.
 
 Suggested frontend implementation: Vite + React + TypeScript, React Flow (verify license/version before use) or accessible SVG for topology, TanStack Query for API state. Avoid a large charting library until timeline requirements justify it.
 
@@ -366,6 +395,9 @@ Suggested frontend implementation: Vite + React + TypeScript, React Flow (verify
 | UI | Component and Playwright smoke/e2e tests | Run/pause/step/evidence navigation and file import |
 | Formal | TLC bounded model + mutant | Finite-check result recorded with exact parameters |
 | CI | Linux + Windows .NET build/test, Python matrix, web checks | Required checks green before tagging |
+| Real Raft | 3 independent Go Raft peers with retained volume | Leader election, committed writes, crash/restart catch-up |
+| Live fault safety | Disposable test network, Toxiproxy, fault TTL and reaper | Majority progress, minority blocked, verified cleanup or explicit failure |
+| Adapter capabilities | Reject unsupported operations and non-allowlisted endpoints | No accidental access to uncontrolled cluster |
 | Security | Dependency and secret scanning, input fuzz/property tests | No known critical issue without documented mitigation |
 
 **Independent model caution:** The reference simulator itself can contain bugs. Review Raft claims against the original paper and test against separate oracles, not only Python parity.
@@ -380,6 +412,8 @@ Suggested frontend implementation: Vite + React + TypeScript, React Flow (verify
 ## 11. CI/CD, supply chain and release discipline
 
 **Initial priority:** Diagnose the preexisting GitHub Actions issue using run metadata, workflow syntax and runner messages; do not equate runner provisioning failure with a failed test.
+
+**Live fault CI:** Execute only against disposable test containers (not external environments). Keep the fault control API on a separate trusted network, use dry runs, strict TTLs and always record whether cleanup succeeded. Do not publicly expose Toxiproxy administration.
 
 **Workflows to add incrementally:** Python reference matrix (3.11–3.13), .NET 10 restore/build/test on Linux and Windows, frontend npm ci/typecheck/lint/test/build, formal-model checks, a bounded deterministic nightly seed corpus, dependency/secret scanning. Keep PR checks reasonably fast; heavier exploration belongs in a separate scheduled or manual workflow.
 
@@ -405,26 +439,30 @@ Suggested frontend implementation: Vite + React + TypeScript, React Flow (verify
 
 ## 13. Estimated work effort and sequencing
 
-| Phase | Weeks | Hours estimate | Depends on |
-| --- | ---: | ---: | --- |
-| Baseline, CI, ADRs | 1 | 12–15 | Existing repo |
-| Contracts and .NET scaffold | 2 | 12–15 | Baseline |
-| Pure C# engine and parity | 3–5 | 36–45 | Contracts |
-| Scenario DSL and traces | 6 | 12–15 | Engine |
-| Safety oracle and witnesses | 7–8 | 24–30 | Engine and traces |
-| Search and minimization | 9–10 | 24–30 | Independent oracle |
-| API and React UI | 11–12 | 24–30 | Trace schema and simulator API |
-| TLA+ bounded model checking | 13–14 | 24–30 | Invariant definitions |
-| Hardening, evaluation, release | 15–16 | 24–30 | All critical paths |
-| **Total** | **16** | **192–240** | A single part-time developer |
+| Phase | Weeks | Hours estimate |
+| --- | ---: | ---: |
+| Python baseline and CI | 1 | 12–15 |
+| Contracts and .NET scaffold | 2 | 12–15 |
+| C# simulator parity | 3–5 | 36–45 |
+| Scenario DSL and trace format | 6 | 12–15 |
+| Independent safety checkers | 7–8 | 24–30 |
+| **Real Raft integration and fault injection** | **9–12** | **48–60** |
+| Seeded simulation exploration and shrinker | 13–14 | 24–30 |
+| API and React viewer | 15–16 | 24–30 |
+| TLA+ bounded checks | 17–18 | 24–30 |
+| Hardening and release | 19–20 | 24–30 |
+| **Total** | **20** | **240–300** |
 
-**Parallel opportunities:** UI sketches after trace schema stabilizes; initial TLA+ safety specification can be started once core invariants are documented, though final evidence is gated in Weeks 13–14. Contract/test work comes before frontend polish.
-
-**Change-control rule:** If >20% off estimate, reduce scope rather than compromise safety evidence. The minimum publishable milestone is C# parity + reproducible correct/unsafe example + independent invariant checker + fully passing CI.
+**Critical path:** Safe real integration is now mandatory before R3 visualization and release. If scope exceeds the estimate, defer frontend polish and stretch integrations, not fault containment, real-cluster correctness evidence or verified cleanup.
 
 ## 14. Backlog in delivery order
 
 **P0 (must-do):**
+- INT01: Define real-cluster adapter, capabilities and fail-closed scope policy.
+- INT02: Implement disposable three-node etcd-io/raft Go test harness and durable state.
+- INT03: Implement controlled Toxiproxy network faults and targeted Raft transport hooks.
+- INT04: Verify minority/majority behavior, recovery, restart and fault cleanup.
+- INT05: Export independent live-cluster client histories, node observations and evidence.
 - B01: Investigate current Python GitHub Actions failures.
 - B02: Freeze both baseline golden semantic traces.
 - B03: Define versioned JSON scenario/trace schemas.
@@ -445,7 +483,7 @@ Suggested frontend implementation: Vite + React + TypeScript, React Flow (verify
 
 **P2 (research extensions):**
 - B16: 3-node exhaustive bounded explorer and conservative POR.
-- B17: External production Raft adapter (e.g., a licensed Go-sidecar harness).
+- B17: Additional adapters for existing owned disposable Raft test clusters (e.g., etcd); do not assume production chaos access.
 - B18: Client operation histories and independent linearizability checker.
 - B19: Disk faults, snapshots, membership changes, automatic elections.
 - B20: Controlled evaluation against existing visualizers (time-to-diagnosis, accuracy).
@@ -481,11 +519,11 @@ Suggested frontend implementation: Vite + React + TypeScript, React Flow (verify
 
 **R1 done:** Both engines run the named scenario; safe run retains committed X and appends Y; unsafe mutation overwrites previously committed X and produces a diagnosable safety violation; deterministic replay; build/test green.
 
-**R2 done:** Bounded search finds the known unsafe behavior without using the full hand-authored failure path, exports a replayable trace, and shrinks it with accurately labeled minimality; checker reports the same invariant on the original and reduced trace.
+**R2 done:** Independent checkers run; a disposable three-node **actual** Raft harness elects leader, replicates operations, tolerates isolated minority, recovers and exports evidence; fault cleanup is verified. The simulated bounded explorer follows in R3.
 
-**R3 done:** From the browser, an engineer can select the scenario, run correct and unsafe modes, inspect nodes, pause/step, view event witnesses and export an artifact. Errors, cancellations and budgets are visible.
+**R3 done:** The simulator discovers and shrinks a known unsafe schedule. From the browser, an engineer can select virtual or integrated Raft mode, run validated experiments, inspect nodes, see witnesses/health/cleanup, and export artifacts. No claim of identical real-world interleavings.
 
-**R4 done:** Reproducible bounded TLA+ checks are published alongside exact model parameters, all CI gates pass (or release is explicitly blocked), and the repository has a comparison study with clearly bounded claims and a self-guided demo.
+**R4 done:** Reproducible bounded TLA+ checks are published alongside exact model parameters, the real Raft fault-injection demo is documented and passing, all CI gates pass (or release is explicitly blocked), and evaluation has bounded claims and reproducible artifacts.
 
 **Five-minute public demo:**
 1. Show initial five-node topology and partition A/B/C vs D/E.
@@ -507,6 +545,9 @@ The following are primary/official sources or original project repositories used
 - Jepsen: https://github.com/jepsen-io/jepsen
 - Porcupine: https://github.com/anishathalye/porcupine
 - TLA+ learning/tools: https://docs.tlapl.us/
+- Real Raft integration + fault safety design: [REAL_RAFT_INTEGRATION.md](REAL_RAFT_INTEGRATION.md)
+- Toxiproxy: https://github.com/Shopify/toxiproxy
+- Testcontainers for .NET Toxiproxy: https://dotnet.testcontainers.org/modules/toxiproxy/
 - Apalache bounded symbolic model checking: https://apalache-mc.org/docs/apalache/index.html
 - Official .NET 10 LTS lifecycle: https://dotnet.microsoft.com/en-us/platform/support/policy
 - Microsoft ASP.NET Core Minimal APIs: https://learn.microsoft.com/en-us/aspnet/core/fundamentals/minimal-apis?view=aspnetcore-10.0
