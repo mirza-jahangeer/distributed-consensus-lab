@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "distributed-consensus-failure-lab"
+version = "0.1.0"
+description = "Deterministic Raft-inspired failure forensics with reproducible safety counterexamples"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+keywords = ["raft", "consensus", "distributed-systems", "fault-injection", "testing"]
+
+[project.scripts]
+consensus-lab = "consensus_lab.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

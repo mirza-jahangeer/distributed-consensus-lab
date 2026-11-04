@@ -1,0 +1,30 @@
+name: Python tests
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.11', '3.12', '3.13']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install editable package
+        run: python -m pip install --no-deps -e .
+      - name: Run unit/integration tests
+        run: python -m unittest discover -s tests -v
+      - name: Compare fault experiments
+        run: consensus-lab compare --trace-dir /tmp/consensus-traces
+      - name: Verify deterministic trace replay
+        run: |
+          consensus-lab replay /tmp/consensus-traces/stale-candidate-correct.json
+          consensus-lab replay /tmp/consensus-traces/stale-candidate-buggy.json
+      - name: Generate standalone report
+        run: consensus-lab report --output /tmp/consensus-report.html
